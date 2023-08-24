@@ -48,15 +48,17 @@ class EnvironmentController:
         self.scenario = Scenario(scenario_dict)
         self._create_environment()
         self.agent_interfaces = self._create_agents(agents)
-        self.reward = {}
+        self.reward_adjusted = {}
+        self.reward_real = {}
         self.INFO_DICT = {}
         self.action = {}
         self.done = False
         self.observation = {}
         self.INFO_DICT['True'] = {}
         for host in self.scenario.hosts:
-            self.INFO_DICT['True'][host] = {'System info': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'User info': 'All',
-                                      'Processes': ['All']}
+            self.INFO_DICT['True'][host] = {'System info': 'All', 'Sessions': 'All', 'Interfaces': 'All',
+                                            'User info': 'All',
+                                            'Processes': ['All']}
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
         for agent in self.scenario.agents:
             self.INFO_DICT[agent] = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
@@ -81,7 +83,8 @@ class EnvironmentController:
         Results
             The initial observation and actions of a agent or white team
         """
-        self.reward = {}
+        self.reward_adjusted = {}
+        self.reward_real = {}
         self.steps = 0
         self.done = False
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
@@ -123,7 +126,6 @@ class EnvironmentController:
             else:
                 agent_action = action
             if not self.test_valid_action(agent_action, agent_object) and not skip_valid_action_check:
-
                 agent_action = InvalidAction(agent_action)
             self.action[agent_name] = agent_action
 
@@ -143,12 +145,22 @@ class EnvironmentController:
             done = self.determine_done(next_observation, true_observation, self.action[agent_name])
             self.done = done or self.done
             # determine reward for agent
-            reward = agent_object.determine_reward(next_observation, true_observation,
-                                                   self.action, self.done)
-            self.reward[agent_name] = reward + self.action[agent_name].cost
+            reward_adjusted, reward_real = agent_object.determine_reward(next_observation, true_observation,
+                                                                         self.action, self.done)
+            # print(self.action[agent_name].cost)
+            if self.action[agent_name].cost == 0:
+                action_impact_rew_adjusted = 0
+            else:
+                action_impact_rew_adjusted = -1.0
+
+            # self.reward_adjusted[agent_name] = reward_adjusted + self.action[agent_name].cost
+            self.reward_adjusted[agent_name] = reward_adjusted + action_impact_rew_adjusted
+
+            self.reward_real[agent_name] = reward_real + self.action[agent_name].cost
             if agent_name != agent:
                 # train agent using obs, reward, previous observation, and done
-                agent_object.train(Results(observation=self.observation[agent_name].data, reward=reward,
+                agent_object.train(Results(observation=self.observation[agent_name].data,
+                                           reward_adjusted=reward_adjusted, reward_real=reward_real,
                                            next_observation=next_observation[agent_name].data, done=self.done))
             self.observation[agent_name] = next_observation[agent_name]
             agent_object.update(self.observation[agent_name])
@@ -170,11 +182,15 @@ class EnvironmentController:
         # if done then complete other agent's turn
 
         if agent is None:
-            result = Results(observation=true_observation, done=self.done)
+            result = Results(observation=true_observation, done=self.done),
         else:
-            result = Results(observation=self.observation[agent].data, done=self.done, reward=round(self.reward[agent], 1),
+
+            result = Results(observation=self.observation[agent].data, done=self.done,
+                             reward_adjusted=round(self.reward_adjusted[agent], 1),
+                             reward_real=round(self.reward_real[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
+            # print(result)
         return result
 
     def execute_action(self, action: Action) -> Observation:
@@ -240,7 +256,7 @@ class EnvironmentController:
             # print(f"{agent_name}'s Reward: {self.reward[agent_name]}")
         if log_file is not None:
             log_file.write(
-                f"{max_steps},{self.reward['Red']},{self.reward['Blue']},"
+                f"{max_steps},{self.reward_real['Red']},{self.reward_real['Blue']},"
                 f"{self.agent_interfaces['Red'].agent.epsilon},"
                 f"{self.agent_interfaces['Red'].agent.gamma}\n"
             )
@@ -302,8 +318,6 @@ class EnvironmentController:
                 """
         return self.action[agent] if agent in self.action else None
 
-
-
     def restore(self, filepath: str):
         """Restores the environment from file
 
@@ -361,6 +375,7 @@ class EnvironmentController:
             else:
                 agent_class = getattr(sys.modules['CybORG.Agents'],
                                       agent_info.agent_type)
+            # print(f"agent type :{agent_info.reward_calculator_type}")
             agents[agent_name] = AgentInterface(
                 agent_class,
                 agent_name,
@@ -403,11 +418,5 @@ class EnvironmentController:
                 return False
         return True
 
-    def get_reward_breakdown(self, agent:str):
+    def get_reward_breakdown(self, agent: str):
         return self.agent_interfaces[agent].reward_calculator.host_scores
-
-        
-
-
-
-

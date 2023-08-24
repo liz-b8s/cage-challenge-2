@@ -29,4 +29,5 @@ class RewardCalculator:
 
 class EmptyRewardCalculator(RewardCalculator):
     def calculate_reward(self, current_state: dict, action: Action, agent_observations: dict, done: bool):
-        return 0.
+        # print('this is emptyyyy')
+        return (0.0, 0.0)

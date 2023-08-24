@@ -28,7 +28,7 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         result.observation = self.observation_change(result.observation)
         result.action_space = self.action_space_change(result.action_space)
         info = vars(result)
-        return np.array(result.observation), result.reward, result.done, info
+        return np.array(result.observation), result.reward_adjusted, result.reward_real, result.done, info
 
     def reset(self, agent=None):
         result = self.env.reset(self.agent_name)

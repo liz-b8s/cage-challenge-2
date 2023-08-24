@@ -21,9 +21,11 @@ class ConfidentialityRewardCalculator(RewardCalculator):
 
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool) -> float:
         self.compromised_hosts = {}
-        reward = -self.infiltrate_rc.calculate_reward(current_state, action, agent_observations, done)
+        reward_adjusted = -self.infiltrate_rc.calculate_reward(current_state, action, agent_observations, done)[0]
+        reward_real = -self.infiltrate_rc.calculate_reward(current_state, action, agent_observations, done)[1]
         self._calculate_compromised_hosts()
-        return reward
+        # print(f'calced rewards: {reward_adjusted, reward_real}')
+        return reward_adjusted, reward_real
 
     def _calculate_compromised_hosts(self):
         for host, value in self.infiltrate_rc.compromised_hosts.items():
@@ -43,9 +45,10 @@ class AvailabilityRewardCalculator(RewardCalculator):
 
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool) -> float:
         self.impacted_hosts = {}
-        reward = -self.disrupt_rc.calculate_reward(current_state, action, agent_observations, done)
+        reward_adjusted = -self.disrupt_rc.calculate_reward(current_state, action, agent_observations, done)[0]
+        reward_real = -self.disrupt_rc.calculate_reward(current_state, action, agent_observations, done)[1]
         self._calculate_impacted_hosts()
-        return reward
+        return reward_adjusted, reward_real
 
     def _calculate_impacted_hosts(self):
         for host, value in self.disrupt_rc.impacted_hosts.items():
@@ -56,6 +59,7 @@ class HybridAvailabilityConfidentialityRewardCalculator(RewardCalculator):
     def __init__(self, agent_name: str, scenario: Scenario):
         super(HybridAvailabilityConfidentialityRewardCalculator, self).__init__(agent_name)
         self.availability_calculator = AvailabilityRewardCalculator(agent_name, scenario)
+
         self.confidentiality_calculator = ConfidentialityRewardCalculator(agent_name, scenario)
 
     def reset(self):
@@ -63,8 +67,19 @@ class HybridAvailabilityConfidentialityRewardCalculator(RewardCalculator):
         self.confidentiality_calculator.reset()
 
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool) -> float:
-        reward = self.availability_calculator.calculate_reward(current_state, action, agent_observations, done) \
-                 + self.confidentiality_calculator.calculate_reward(current_state, action, agent_observations, done)
+        reward = (self.availability_calculator.calculate_reward(current_state, action, agent_observations, done)[0]
+                 + self.confidentiality_calculator.calculate_reward(current_state, action, agent_observations, done)[0],
+                  self.availability_calculator.calculate_reward(current_state, action, agent_observations, done)[1]
+                 + self.confidentiality_calculator.calculate_reward(current_state, action, agent_observations, done)[1])
+        one = (self.availability_calculator.calculate_reward(current_state, action, agent_observations, done)[0]
+                 + self.confidentiality_calculator.calculate_reward(current_state, action, agent_observations, done)[0])
+
+        two = (self.availability_calculator.calculate_reward(current_state, action, agent_observations, done)[1]
+                 + self.confidentiality_calculator.calculate_reward(current_state, action, agent_observations, done)[1])
+
+        # print(f"part 1: {one}")
+        # print(f"part 2: {two}")
+        # print(f"this is reward: {reward}")
         self._compute_host_scores(current_state.keys())
         return reward
 

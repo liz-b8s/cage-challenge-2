@@ -121,21 +121,34 @@ class AgentInterface:
         calc = None
         if reward_calculator == "Baseline":
             calc = BaselineRewardCalculator(agent_name)
+            # print('Baseline')
         elif reward_calculator == 'Pwn':
             calc = PwnRewardCalculator(agent_name, scenario)
+            # print('pwn')
         elif reward_calculator == 'Disrupt':
             calc = DistruptRewardCalculator(agent_name, scenario)
+            # print('disrupt')
         elif reward_calculator == 'None' or reward_calculator is None:
             calc = EmptyRewardCalculator(agent_name)
+            # print('empty')
         elif reward_calculator == 'HybridAvailabilityConfidentiality':
             calc = HybridAvailabilityConfidentialityRewardCalculator(agent_name, scenario)
+            # print('hybrid_avail')
         elif reward_calculator == 'HybridImpactPwn':
             calc = HybridImpactPwnRewardCalculator(agent_name, scenario)
+            # print('hybrid_imp')
         else:
             raise ValueError(f"Invalid calculator selection: {reward_calculator} for agent {agent_name}")
         return calc
 
     def determine_reward(self, agent_obs: dict, true_obs: dict, action: Action, done: bool) -> float:
+        # print(f'true obs: {true_obs}')
+        # print(f'action: {action}')
+        # print(f'agent obv {agent_obs}')
+        # print(f'done: {done}')
+        # x = self.reward_calculator.calculate_reward(current_state=true_obs, action=action,
+        #                                                agent_observations=agent_obs, done=done)
+        # print(f"this is !! {x}")
         return self.reward_calculator.calculate_reward(current_state=true_obs, action=action,
                                                        agent_observations=agent_obs, done=done)
 

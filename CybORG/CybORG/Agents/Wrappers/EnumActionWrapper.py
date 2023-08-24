@@ -1,5 +1,4 @@
-import copy
-import inspect, pprint
+import inspect
 from typing import Union
 
 from CybORG.Agents.SimpleAgents import BaseAgent

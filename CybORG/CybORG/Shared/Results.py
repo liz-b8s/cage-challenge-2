@@ -11,7 +11,8 @@ class Results:
     def __init__(self,
                  observation: dict = None,
                  done: bool = None,
-                 reward: float = None,
+                 reward_adjusted: float = None,
+                 reward_real: float = None,
                  info=None,
                  parameter_mask=None,
                  action_space=None,
@@ -23,7 +24,8 @@ class Results:
         self.observation = observation
         self.next_observation = next_observation
         self.done = done
-        self.reward = reward
+        self.reward_adjusted = reward_adjusted
+        self.reward_real = reward_real
         self.action = action
         self.info = info
         self.parameter_mask = parameter_mask
@@ -39,7 +41,8 @@ class Results:
     def copy(self):
         copy_kwargs = {
             "done": self.done,
-            "reward": self.reward,
+            "reward_adjusted": self.reward_adjusted,
+            "reward_real": self.reward_real,
             "error": deepcopy(self.error),
             "error_msg": deepcopy(self.error_msg),
             "action": deepcopy(self.action),
